@@ -42,12 +42,19 @@ class Issue(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    STATUS_CHOICES = [
-        ('OPEN', 'Open'),
-        ('IN_PROGRESS', 'In Progress'),
-        ('CLOSED', 'Closed'),
+    NATURE_CHOICES = [
+        ('BUG', 'Bug'),
+        ('FEATURE', 'Feature'),
+        ('TASK', 'Task'),
     ]
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN')
+    nature = models.CharField(max_length=20, choices=NATURE_CHOICES, default='')
+    
+    STATUS_CHOICES = [
+        ('TO_DO', 'To Do'),
+        ('IN_PROGRESS', 'In Progress'),
+        ('FINISHED', 'Finished'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='TO_DO')
 
     def __str__(self):
         return f"{self.title} - {self.project.title}"
