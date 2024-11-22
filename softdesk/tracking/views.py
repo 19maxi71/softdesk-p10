@@ -15,17 +15,26 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    # permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAdminUser]
 
 class ProjectViewSet(viewsets.ModelViewSet):
     """
     View pour gérer les opérations CRUD pour les projets.
     """
-    queryset = Project.objects.all()
     serializer_class = ProjectSerializer
-    # permission_classes = [permissions.IsAuthenticated, IsCreatorOrReadOnly, IsContributorOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated, IsCreatorOrReadOnly]
+
+    def get_queryset(self):
+        """
+        Restreindre l'accès aux projets créés ou auxquels l'utilisateur contribue.
+        """
+        user = self.request.user
+        return Project.objects.filter(creator=user) | Project.objects.filter(contributors__user=user)
 
     def perform_create(self, serializer):
+        """
+        Lors de la création d'un projet, attribuer automatiquement le créateur au user connecté.
+        """
         serializer.save(creator=self.request.user)
 
 class ContributorViewSet(viewsets.ModelViewSet):
@@ -34,26 +43,41 @@ class ContributorViewSet(viewsets.ModelViewSet):
     """
     queryset = Contributor.objects.all()
     serializer_class = ContributorSerializer
-    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
 class IssueViewSet(viewsets.ModelViewSet):
     """
-    View pour gérer les opérations CRUD pour les 'issues'.
+    View pour gérer les opérations CRUD pour les issues.
     """
-    queryset = Issue.objects.all()
     serializer_class = IssueSerializer
-    # permission_classes = [permissions.IsAuthenticated, IsContributorOrReadOnly]
+    
+    def get_queryset(self):
+        user = self.request.user
+        return Issue.objects.filter(project__contributors__user=user)
 
+    """
+    Lors de la création d'une issue, vérifier si 
+    l'utilisateur assigné est un contributeur du projet.
+    """
     def perform_create(self, serializer):
+        assigned_to = self.request.data.get('assigned_to')
+        project = serializer.validated_data.get('project')
+        
+        if assigned_to and not Contributor.objects.filter(user_id=assigned_to, project=project).exists():
+            raise serializers.ValidationError("L'utilisateur assigné doit être un contributeur du projet.")
+        
         serializer.save(created_by=self.request.user)
+        
 
 class CommentViewSet(viewsets.ModelViewSet):
-    """
-    View pour gérer les opérations CRUD pour les commentaires.
-    """
-    queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-    # permission_classes = [permissions.IsAuthenticated, IsContributorOrReadOnly]
+
+    def get_queryset(self):
+        user = self.request.user
+        return Comment.objects.filter(issue__project__contributors__user=user)
 
     def perform_create(self, serializer):
+        issue = serializer.validated_data['issue']
+        if not Contributor.objects.filter(user=self.request.user, project=issue.project).exists():
+            raise serializers.ValidationError("Vous n'êtes pas un contributeur du projet.")
         serializer.save(author=self.request.user)
