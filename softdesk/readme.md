@@ -58,7 +58,11 @@ Softdesk is a project management application built with Django and Django REST F
 
 ## API Documentation
 
-The API documentation is available at `http://127.0.0.1:8000/api/docs/` once the server is running.
+- The API documentation is available at `http://127.0.0.1:8000/api/docs/` once the server is running.
+- To have a list of all endpoints run the following command:
+    ```bash
+    python manage.py show_urls --format table
+    ```
 
 ## Contributing
 
