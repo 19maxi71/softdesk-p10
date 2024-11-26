@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, serializers
 from .models import User, Project, Contributor, Issue, Comment
 from .serializers import (
     UserSerializer, ProjectSerializer, ContributorSerializer, IssueSerializer, CommentSerializer
@@ -73,11 +73,11 @@ class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
 
     def get_queryset(self):
-        user = self.request.user
-        return Comment.objects.filter(issue__project__contributors__user=user)
+        issue_id = self.kwargs['issue_pk']
+        return Comment.objects.filter(issue_id=issue_id, issue__project__contributors__user=self.request.user)
 
     def perform_create(self, serializer):
-        issue = serializer.validated_data['issue']
+        issue = Issue.objects.get(pk=self.kwargs['issue_pk'])
         if not Contributor.objects.filter(user=self.request.user, project=issue.project).exists():
             raise serializers.ValidationError("Vous n'êtes pas un contributeur du projet.")
-        serializer.save(author=self.request.user)
+        serializer.save(author=self.request.user, issue=issue)
