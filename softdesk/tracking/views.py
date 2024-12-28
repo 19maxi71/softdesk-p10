@@ -1,6 +1,10 @@
 from django.shortcuts import render
 from rest_framework import viewsets, permissions, serializers
 from .models import User, Project, Contributor, Issue, Comment
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
 from .serializers import (
     UserSerializer, ProjectSerializer, ContributorSerializer, IssueSerializer, CommentSerializer
 )
@@ -81,3 +85,13 @@ class CommentViewSet(viewsets.ModelViewSet):
         if not Contributor.objects.filter(user=self.request.user, project=issue.project).exists():
             raise serializers.ValidationError("Vous n'êtes pas un contributeur du projet.")
         serializer.save(author=self.request.user, issue=issue)
+
+    """
+    Supprimer un utilisateur et toutes ses données associées.(Droit à l'oubli)
+    """
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_user_data(request):
+    user = request.user
+    user.delete()
+    return Response({"message": "Votre compte a été supprimé. Bye-Bye!"}, status=status.HTTP_200_OK)
