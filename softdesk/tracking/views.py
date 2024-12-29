@@ -95,3 +95,15 @@ def delete_user_data(request):
     user = request.user
     user.delete()
     return Response({"message": "Votre compte a été supprimé. Bye-Bye!"}, status=status.HTTP_200_OK)
+
+    """ 
+    Traitement de consentement pour les données sensibles.
+    """
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def process_sensitive_data(request):
+    if not request.user.has_consented:
+        return Response({"error": "Vous devez donner votre consentement pour cette action."}, status=status.HTTP_403_FORBIDDEN)
+    
+    # Traitement des données sensibles ici
+    return Response({"message": "Données traitées avec succès."}, status=status.HTTP_200_OK)

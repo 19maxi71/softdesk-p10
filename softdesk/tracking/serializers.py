@@ -9,7 +9,7 @@ Basé sur la classe ModelSerializer de Django REST Framework.
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'age', 'can_be_contacted', 'can_data_be_shared']
+        fields = ['id', 'username', 'age', 'can_be_contacted', 'can_data_be_shared', 'has_consented']
     
     """
     Méthode pour valider l'âge de l'utilisateur.
