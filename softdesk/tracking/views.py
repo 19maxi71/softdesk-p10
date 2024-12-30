@@ -8,7 +8,8 @@ from rest_framework import status
 from .serializers import (
     UserSerializer, ProjectSerializer, ContributorSerializer, IssueSerializer, CommentSerializer
 )
-from .permissions import IsCreatorOrReadOnly, IsContributorOrReadOnly
+from .permissions import IsCreatorOrReadOnly
+from rest_framework.pagination import PageNumberPagination
 
 # Create your views here.
 
@@ -19,14 +20,24 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAdminUser, IsAuthenticated]
+
+class SetPagination(PageNumberPagination):
+    """
+    Pagination pour les projets(5 par page, jusqu'au 20 maximum). 
+    Exigence 'GREEN CODE'.
+    """
+    page_size = 5
+    page_size_query_param = 'page_size'
+    max_page_size = 20
 
 class ProjectViewSet(viewsets.ModelViewSet):
     """
-    View pour gérer les opérations CRUD pour les projets.
+    View pour gérer les opérations CRUD pour les projets. Et la pagination.
     """
     serializer_class = ProjectSerializer
     permission_classes = [permissions.IsAuthenticated, IsCreatorOrReadOnly]
+    pagination_class = SetPagination
 
     def get_queryset(self):
         """
@@ -40,6 +51,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         Lors de la création d'un projet, attribuer automatiquement le créateur au user connecté.
         """
         serializer.save(creator=self.request.user)
+        
 
 class ContributorViewSet(viewsets.ModelViewSet):
     """
@@ -48,6 +60,13 @@ class ContributorViewSet(viewsets.ModelViewSet):
     queryset = Contributor.objects.all()
     serializer_class = ContributorSerializer
     permission_classes = [permissions.IsAuthenticated]
+    
+    def perform_create(self, serializer):
+        project = serializer.validated_data['project']
+        if self.request.user != project.creator:
+            raise serializers.ValidationError("Seul le créateur du projet peut ajouter des contributeurs.")
+        serializer.save()
+
 
 class IssueViewSet(viewsets.ModelViewSet):
     """
@@ -86,22 +105,24 @@ class CommentViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError("Vous n'êtes pas un contributeur du projet.")
         serializer.save(author=self.request.user, issue=issue)
 
-    """
-    Supprimer un utilisateur et toutes ses données associées.(Droit à l'oubli)
-    """
+
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_user_data(request):
+    """
+    Supprimer un utilisateur et toutes ses données associées.(Droit à l'oubli)
+    """
     user = request.user
     user.delete()
     return Response({"message": "Votre compte a été supprimé. Bye-Bye!"}, status=status.HTTP_200_OK)
 
-    """ 
-    Traitement de consentement pour les données sensibles.
-    """
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def process_sensitive_data(request):
+    """ 
+    Traitement de consentement pour les données sensibles afin de respecter RGPD.
+    """
     if not request.user.has_consented:
         return Response({"error": "Vous devez donner votre consentement pour cette action."}, status=status.HTTP_403_FORBIDDEN)
     
