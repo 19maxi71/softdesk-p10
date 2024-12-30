@@ -7,17 +7,29 @@ Basé sur la classe ModelSerializer de Django REST Framework.
 """
 
 class UserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+    
     class Meta:
         model = User
-        fields = ['id', 'username', 'age', 'can_be_contacted', 'can_data_be_shared', 'has_consented']
+        fields = ['id', 'username', 'email', 'password', 'age', 'can_be_contacted', 'can_data_be_shared', 'has_consented']
+        extra_kwargs = {'password': {'write_only': True}}
     
-    """
-    Méthode pour valider l'âge de l'utilisateur.
-    """
     def validate(self, data):
         if data.get('age') is not None and data['age'] < 15:
             raise serializers.ValidationError("Doit être âgé de 15 ans ou plus.")
         return data
+    
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data['email'],
+            password=validated_data['password'],
+            age=validated_data['age'],
+            can_be_contacted=validated_data.get('can_be_contacted', False),
+            can_data_be_shared=validated_data.get('can_data_be_shared', False),
+            has_consented=validated_data.get('has_consented', False)
+        )
+        return user
 
 class ProjectSerializer(serializers.ModelSerializer):
     creator = serializers.StringRelatedField(read_only=True)

@@ -1,8 +1,8 @@
 from django.shortcuts import render
-from rest_framework import viewsets, permissions, serializers
+from rest_framework import viewsets, permissions, serializers, generics
 from .models import User, Project, Contributor, Issue, Comment
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from .serializers import (
@@ -10,6 +10,7 @@ from .serializers import (
 )
 from .permissions import IsCreatorOrReadOnly
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.views import APIView
 
 # Create your views here.
 
@@ -30,6 +31,17 @@ class SetPagination(PageNumberPagination):
     page_size = 5
     page_size_query_param = 'page_size'
     max_page_size = 20
+
+class UserRegistrationView(generics.CreateAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ProjectViewSet(viewsets.ModelViewSet):
     """
